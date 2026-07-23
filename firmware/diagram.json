@@ -3,8 +3,12 @@
   "author": "Assil",
   "editor": "wokwi",
   "parts": [
-    { "type": "board-stm32-bluepill", "id": "bluepill", "top": 0, "left": 0 }
+    { "type": "board-stm32-bluepill", "id": "bluepill", "top": 0, "left": 0 },
+    { "type": "led", "id": "led1", "top": 160, "left": 220, "attrs": { "color": "red" } }
   ],
-  "connections": [],
+  "connections": [
+    [ "bluepill:PC13", "led1:A", "red", [] ],
+    [ "led1:C", "bluepill:GND", "black", [] ]
+  ],
   "dependencies": {}
 }

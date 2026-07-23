@@ -1,49 +1,45 @@
-#include "stm32f1xx_hal.h"
-
-void SystemClock_Config(void);
-static void GPIO_Init(void);
-
-int main(void)
-{
-    HAL_Init();
-    SystemClock_Config();
-    GPIO_Init();
-
-    while (1)
-{
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    for (volatile long i = 0; i < 8000000; i++);
-}
-}
+#if defined(STM32F103xB)
+#include "stm32f1xx.h"
+#define LED_GPIO_PORT GPIOC
+#define LED_PIN (1U << 13)
+#define LED_GPIO_CLOCK_ENABLE() do { RCC->APB2ENR |= RCC_APB2ENR_IOPCEN; } while (0)
+#elif defined(STM32F401xE)
+#include "stm32f4xx.h"
+#define LED_GPIO_PORT GPIOA
+#define LED_PIN (1U << 5)
+#define LED_GPIO_CLOCK_ENABLE() do { RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; } while (0)
+#else
+#error "Unsupported target board"
+#endif
 
 static void GPIO_Init(void)
 {
-    __HAL_RCC_GPIOC_CLK_ENABLE();
+    LED_GPIO_CLOCK_ENABLE();
 
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = GPIO_PIN_13;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+#if defined(STM32F103xB)
+    LED_GPIO_PORT->CRH &= ~(0xFU << 20);
+    LED_GPIO_PORT->CRH |= (0x2U << 20);
+#elif defined(STM32F401xE)
+    LED_GPIO_PORT->MODER &= ~(0x3U << 10);
+    LED_GPIO_PORT->MODER |= (0x1U << 10);
+    LED_GPIO_PORT->OTYPER &= ~(0x1U << 5);
+    LED_GPIO_PORT->OSPEEDR &= ~(0x3U << 10);
+    LED_GPIO_PORT->OSPEEDR |= (0x2U << 10);
+    LED_GPIO_PORT->PUPDR &= ~(0x3U << 10);
+#endif
+
+    LED_GPIO_PORT->ODR &= ~LED_PIN;
 }
 
-void SystemClock_Config(void)
+int main(void)
 {
-    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+    GPIO_Init();
 
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-    RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-    HAL_RCC_OscConfig(&RCC_OscInitStruct);
-
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK
-                                | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-    HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0);
+    while (1)
+    {
+        LED_GPIO_PORT->ODR ^= LED_PIN;
+        for (volatile uint32_t i = 0; i < 500000; ++i)
+        {
+        }
+    }
 }
